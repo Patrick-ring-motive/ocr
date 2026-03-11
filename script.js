@@ -63,8 +63,8 @@
     return pdfjs;
   }
 
-  // ── Convert a PDF file to an array of image blobs ────────────
-  async function pdfToImages(file) {
+  // ── Open a PDF and return the document + page images ─────────
+  async function loadPdf(file) {
     const pdfjsLib = await loadPdfJs();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -73,7 +73,7 @@
     for (let i = 1; i <= pdf.numPages; i++) {
       setStatus(`Rendering PDF page ${i} of ${pdf.numPages}…`);
       const page = await pdf.getPage(i);
-      const scale = 2; // higher = better OCR accuracy
+      const scale = 2;
       const viewport = page.getViewport({ scale });
 
       const canvas = document.createElement("canvas");
@@ -85,7 +85,20 @@
       const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
       images.push(blob);
     }
-    return images;
+    return { pdf, images };
+  }
+
+  // ── Extract embedded text from a PDF using PDF.js ────────────
+  async function extractPdfText(pdf) {
+    const pageTexts = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      setStatus(`Extracting text from page ${i} of ${pdf.numPages}…`);
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map((item) => item.str);
+      pageTexts.push(strings.join(" "));
+    }
+    return pageTexts;
   }
 
   // ── Show image previews ──────────────────────────────────────
@@ -134,22 +147,36 @@
     clearAll();
 
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    let imageBlobs;
 
     try {
       if (isPdf) {
         setStatus("Loading PDF…");
-        imageBlobs = await pdfToImages(file);
+        const { pdf, images } = await loadPdf(file);
+        showPreviews(images);
+
+        // Try native text extraction first
+        setStatus("Checking for embedded text…");
+        const pageTexts = await extractPdfText(pdf);
+        const nativeText = pageTexts.join("\n\n--- Page break ---\n\n").trim();
+
+        if (nativeText.length > 0) {
+          ocrOutput.value = nativeText;
+          resultSection.style.display = "block";
+          setStatus("Done — text extracted directly from PDF.");
+          return;
+        }
+
+        // No embedded text found — fall back to OCR
+        setStatus("No embedded text found. Running OCR…");
+        const ocrText = await runOcr(images);
+        ocrOutput.value = ocrText;
       } else {
-        imageBlobs = [file];
+        showPreviews([file]);
+        setStatus("Loading OCR engine…");
+        const ocrText = await runOcr([file]);
+        ocrOutput.value = ocrText;
       }
 
-      showPreviews(imageBlobs);
-
-      setStatus("Loading OCR engine…");
-      const text = await runOcr(imageBlobs);
-
-      ocrOutput.value = text;
       resultSection.style.display = "block";
       setStatus("Done!");
       hideProgress();
