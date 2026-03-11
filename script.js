@@ -1,5 +1,6 @@
 (async function () {
-  // ── CDN / local imports ───────────────────────────────────────
+  // ── CDN / local imports ─
+  await import('https://cdn.jsdelivr.net/npm/core-js-bundle/minified.min.js?');
   const TESSERACT_CDN =
     "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
   const _fixText = (await import("./libs/fix-text.js")).fixText;
