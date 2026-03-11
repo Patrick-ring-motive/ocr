@@ -176,9 +176,9 @@
         // Try native text extraction first
         setStatus("Checking for embedded text…");
         const pageTexts = await extractPdfText(pdf);
-        const nativeText = pageTexts.join(PAGE_BREAK).trim();
+        const nativeText = pageTexts.join("").trim();
 
-        if (nativeText.replace(/\s/g, "").length > 0) {
+        if (pageTexts.replace(/\s/g, "").length > 0) {
           displayWithLazyFix(pageTexts);
           setStatus("Done — text extracted directly from PDF.");
           return;
