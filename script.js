@@ -87,23 +87,22 @@
     const pdfjsLib = await loadPdfJs();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const images = [];
+    setStatus(`Rendering ${pdf.numPages} PDF page(s)…`);
+    const images = await Promise.all(
+      Array.from({ length: pdf.numPages }, async (_, idx) => {
+        const page = await pdf.getPage(idx + 1);
+        const scale = 2;
+        const viewport = page.getViewport({ scale });
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-      setStatus(`Rendering PDF page ${i} of ${pdf.numPages}…`);
-      const page = await pdf.getPage(i);
-      const scale = 2;
-      const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d");
+        await page.render({ canvasContext: ctx, viewport }).promise;
 
-      const canvas = document.createElement("canvas");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext("2d");
-      await page.render({ canvasContext: ctx, viewport }).promise;
-
-      const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
-      images.push(blob);
-    }
+        return new Promise((r) => canvas.toBlob(r, "image/png"));
+      })
+    );
     return { pdf, images };
   }
 
