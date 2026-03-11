@@ -40,7 +40,7 @@ export const fixText = async function fixText(
       method: "POST",
       body: encodeURIComponent(stringify(payload)),
     });
-    responsePayload = JSON.parse(await langCache[text]);
+    const responsePayload = JSON.parse(await langCache[text]);
     out = responsePayload.textOut;
     //console.log({text},{responsePayload});
   } catch (e) {
