@@ -35,7 +35,7 @@
     previewContainer.innerHTML = "";
     previewSection.style.display = "none";
     resultSection.style.display = "none";
-    ocrOutput.value = "";
+    ocrOutput.textContent = "";
     setStatus("");
     hideProgress();
     fileInput.value = "";
@@ -160,7 +160,7 @@
         const nativeText = pageTexts.join("\n\n--- Page break ---\n\n").trim();
 
         if (nativeText.length > 0) {
-          ocrOutput.value = nativeText;
+          ocrOutput.textContent = nativeText;
           resultSection.style.display = "block";
           setStatus("Done — text extracted directly from PDF.");
           return;
@@ -169,12 +169,12 @@
         // No embedded text found — fall back to OCR
         setStatus("No embedded text found. Running OCR…");
         const ocrText = await runOcr(images);
-        ocrOutput.value = ocrText;
+        ocrOutput.textContent = ocrText;
       } else {
         showPreviews([file]);
         setStatus("Loading OCR engine…");
         const ocrText = await runOcr([file]);
-        ocrOutput.value = ocrText;
+        ocrOutput.textContent = ocrText;
       }
 
       resultSection.style.display = "block";
@@ -210,8 +210,7 @@
   });
 
   copyBtn.addEventListener("click", () => {
-    ocrOutput.select();
-    navigator.clipboard.writeText(ocrOutput.value).then(() => {
+    navigator.clipboard.writeText(ocrOutput.textContent).then(() => {
       copyBtn.textContent = "Copied!";
       setTimeout(() => (copyBtn.textContent = "Copy Text"), 1500);
     });
