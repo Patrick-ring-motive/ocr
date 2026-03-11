@@ -1,6 +1,5 @@
 (async function () {
-  // ── CDN imports ──────────────────────────────────────────────
-  const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168";
+  // ── CDN / local imports ───────────────────────────────────────
   const TESSERACT_CDN =
     "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
 
@@ -54,28 +53,14 @@
     });
   }
 
-  // ── Load PDF.js from CDN ─────────────────────────────────────
-  function loadPdfJs() {
-    return new Promise((resolve, reject) => {
-      if (window.pdfjsLib) return resolve(window.pdfjsLib);
-      const s = document.createElement("script");
-      s.src = PDFJS_CDN + "/pdf.min.mjs";
-      s.type = "module";
-      // For module scripts we can't rely on window.pdfjsLib being set.
-      // Use a classic script instead.
-      s.remove();
-
-      const sc = document.createElement("script");
-      sc.src = PDFJS_CDN + "/pdf.min.js";
-      sc.onload = () => {
-        const lib = window.pdfjsLib;
-        lib.GlobalWorkerOptions.workerSrc =
-          PDFJS_CDN + "/pdf.worker.min.js";
-        resolve(lib);
-      };
-      sc.onerror = () => reject(new Error("Failed to load PDF.js"));
-      document.head.appendChild(sc);
-    });
+  // ── Load PDF.js from local files ──────────────────────────────
+  let pdfjsLibCached;
+  async function loadPdfJs() {
+    if (pdfjsLibCached) return pdfjsLibCached;
+    const pdfjs = await import("./libs/pdf.min.mjs");
+    pdfjs.GlobalWorkerOptions.workerSrc = "./libs/pdf.worker.min.mjs";
+    pdfjsLibCached = pdfjs;
+    return pdfjs;
   }
 
   // ── Convert a PDF file to an array of image blobs ────────────
