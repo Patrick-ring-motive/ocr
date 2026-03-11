@@ -2,8 +2,8 @@
   // ── CDN / local imports ───────────────────────────────────────
   const TESSERACT_CDN =
     "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-  const {fixText} = await import("./libs/fix-text.js");
-
+  const _fixText = (await import("./libs/fix-text.js")).fixText;
+  const fixText = text => _fixText(text, "fy", "en");
   // ── DOM refs ─────────────────────────────────────────────────
   const dropZone = document.getElementById("drop-zone");
   const fileInput = document.getElementById("file-input");
@@ -40,6 +40,17 @@
     setStatus("");
     hideProgress();
     fileInput.value = "";
+  }
+
+  // ── Display text immediately, then lazy-correct via fixText ──
+  function displayWithLazyFix(text) {
+    ocrOutput.textContent = text;
+    resultSection.style.display = "block";
+    fixText(text).then((corrected) => {
+      if (ocrOutput.textContent === text) {
+        ocrOutput.textContent = corrected;
+      }
+    }).catch(() => { /* keep original on failure */ });
   }
 
   // ── Load Tesseract.js from CDN ───────────────────────────────
@@ -97,7 +108,7 @@
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const strings = content.items.map((item) => item.str);
-      pageTexts.push(await fixText(strings.join(" ")));
+      pageTexts.push(strings.join(" "));
     }
     return pageTexts;
   }
@@ -134,7 +145,7 @@
       const {
         data: { text },
       } = await worker.recognize(imageBlobs[i]);
-      results.push(await fixText(text));
+      results.push(text);
     }
 
     await worker.terminate();
@@ -161,8 +172,7 @@
         const nativeText = pageTexts.join("\n\n--- Page break ---\n\n").trim();
 
         if (nativeText.length > 0) {
-          ocrOutput.textContent = nativeText;
-          resultSection.style.display = "block";
+          displayWithLazyFix(nativeText);
           setStatus("Done — text extracted directly from PDF.");
           return;
         }
@@ -170,15 +180,14 @@
         // No embedded text found — fall back to OCR
         setStatus("No embedded text found. Running OCR…");
         const ocrText = await runOcr(images);
-        ocrOutput.textContent = await fixText(ocrText);
+        displayWithLazyFix(ocrText);
       } else {
         showPreviews([file]);
         setStatus("Loading OCR engine…");
         const ocrText = await runOcr([file]);
-        ocrOutput.textContent = await fixText(ocrText);
+        displayWithLazyFix(ocrText);
       }
 
-      resultSection.style.display = "block";
       setStatus("Done!");
       hideProgress();
     } catch (err) {
