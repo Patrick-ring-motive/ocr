@@ -196,8 +196,8 @@
           ? "text/xml" : "text/html";
         const doc = new DOMParser().parseFromString(markup, mimeType);
         const text = doc.body
-          ? doc.body.textContent.trim()
-          : doc.documentElement.textContent.trim();
+          ? doc.body.innerText.trim()
+          : doc.documentElement.innerText.trim();
         displayWithLazyFix([text]);
         setStatus("Done — text extracted from markup.");
       } else if (isPdf) {
