@@ -138,9 +138,20 @@
 
     const results = await Promise.all(
       imageBlobs.map(async (blob) => {
+        const startTime = Date.now();
+        let lastTime = startTime;
+        console.log("Spinning up OCR worker for page…");
         const worker = await Tesseract.createWorker("eng");
+        console.log("Spin up took", Date.now() - lastTime, "ms. Starting recognition…");
+        lastTime = Date.now();
+        console.log("Recognising page…");
         const { data: { text } } = await worker.recognize(blob);
+        console.log("Recognition completed in", Date.now() - lastTime, "ms. Terminating worker…");
+        lastTime = Date.now();
+        console.log("Spinning down OCR worker for page…");
         await worker.terminate();
+        console.log("Spin down completed in", Date.now() - lastTime, "ms.");
+        console.log(`OCR completed for page in ${Date.now() - startTime}ms`);
         return text;
       })
     );
@@ -155,9 +166,22 @@
     clearAll();
 
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const isMarkup = /^(text\/(html|xml)|application\/(xml|xhtml\+xml|svg\+xml))$/.test(file.type)
+      || /\.(html?|xml|xhtml|svg)$/i.test(file.name);
 
     try {
-      if (isPdf) {
+      if (isMarkup) {
+        setStatus("Parsing markup…");
+        const markup = await file.text();
+        const mimeType = /xml|xhtml|svg/i.test(file.name) || /xml/i.test(file.type)
+          ? "text/xml" : "text/html";
+        const doc = new DOMParser().parseFromString(markup, mimeType);
+        const text = doc.body
+          ? doc.body.textContent.trim()
+          : doc.documentElement.textContent.trim();
+        displayWithLazyFix([text]);
+        setStatus("Done — text extracted from markup.");
+      } else if (isPdf) {
         setStatus("Loading PDF…");
         const { pdf, images } = await loadPdf(file);
         showPreviews(images);
