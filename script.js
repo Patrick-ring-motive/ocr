@@ -97,7 +97,7 @@
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const strings = content.items.map((item) => item.str);
-      pageTexts.push(strings.join(" "));
+      pageTexts.push(await fixText(strings.join(" ")));
     }
     return pageTexts;
   }
