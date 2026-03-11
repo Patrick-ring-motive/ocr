@@ -130,31 +130,21 @@
     }
   }
 
-  // ── Run OCR on a list of image blobs ─────────────────────────
+  // ── Run OCR on a list of image blobs (parallel) ───────────────
   async function runOcr(imageBlobs) {
     const Tesseract = await loadTesseract();
 
-    const worker = await Tesseract.createWorker("eng", 1, {
-      logger: (m) => {
-        if (m.status === "recognizing text") {
-          setProgress(Math.round(m.progress * 100));
-        }
-      },
-    });
+    setStatus(`Recognising text across ${imageBlobs.length} page(s)…`);
 
-    const results = [];
-    for (let i = 0; i < imageBlobs.length; i++) {
-      setStatus(
-        `Recognising text (${i + 1}/${imageBlobs.length})…`
-      );
-      setProgress(0);
-      const {
-        data: { text },
-      } = await worker.recognize(imageBlobs[i]);
-      results.push(text);
-    }
+    const results = await Promise.all(
+      imageBlobs.map(async (blob) => {
+        const worker = await Tesseract.createWorker("eng");
+        const { data: { text } } = await worker.recognize(blob);
+        await worker.terminate();
+        return text;
+      })
+    );
 
-    await worker.terminate();
     return results;
   }
 
