@@ -178,7 +178,7 @@
         const pageTexts = await extractPdfText(pdf);
         const nativeText = pageTexts.join(PAGE_BREAK).trim();
 
-        if (nativeText.length > 0) {
+        if (nativeText.replace(/\s/g, "").length > 0) {
           displayWithLazyFix(pageTexts);
           setStatus("Done — text extracted directly from PDF.");
           return;
