@@ -218,3 +218,4 @@
 
   clearBtn.addEventListener("click", clearAll);
 })();
+import('https://patrick-ring-motive.github.io/logs-highlighter/index.js')
