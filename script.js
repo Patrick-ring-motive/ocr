@@ -130,28 +130,47 @@
     }
   }
 
-  // ── Run OCR on a list of image blobs (parallel) ───────────────
-  async function runOcr(imageBlobs) {
+  // ── Tesseract worker pool ──────────────────────────────────────
+  const INITIAL_POOL_SIZE = 10;
+  const idle = [];
+  let poolReady;
+
+  async function initPool() {
+    if (poolReady) return poolReady;
+    poolReady = (async () => {
+      const Tesseract = await loadTesseract();
+      const workers = await Promise.all(
+        Array.from({ length: INITIAL_POOL_SIZE }, () =>
+          Tesseract.createWorker("eng")
+        )
+      );
+      idle.push(...workers);
+    })();
+    return poolReady;
+  }
+
+  async function acquireWorker() {
+    await initPool();
+    if (idle.length > 0) return idle.pop();
     const Tesseract = await loadTesseract();
+    return Tesseract.createWorker("eng");
+  }
+
+  function releaseWorker(worker) {
+    idle.push(worker);
+  }
+
+  // ── Run OCR on a list of image blobs (parallel via pool) ─────
+  async function runOcr(imageBlobs) {
+    await initPool();
 
     setStatus(`Recognising text across ${imageBlobs.length} page(s)…`);
 
     const results = await Promise.all(
       imageBlobs.map(async (blob) => {
-        const startTime = Date.now();
-        let lastTime = startTime;
-        console.log("Spinning up OCR worker for page…");
-        const worker = await Tesseract.createWorker("eng");
-        console.log("Spin up took", Date.now() - lastTime, "ms. Starting recognition…");
-        lastTime = Date.now();
-        console.log("Recognising page…");
+        const worker = await acquireWorker();
         const { data: { text } } = await worker.recognize(blob);
-        console.log("Recognition completed in", Date.now() - lastTime, "ms. Terminating worker…");
-        lastTime = Date.now();
-        console.log("Spinning down OCR worker for page…");
-        await worker.terminate();
-        console.log("Spin down completed in", Date.now() - lastTime, "ms.");
-        console.log(`OCR completed for page in ${Date.now() - startTime}ms`);
+        releaseWorker(worker);
         return text;
       })
     );
