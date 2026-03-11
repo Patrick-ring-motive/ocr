@@ -42,15 +42,22 @@
     fileInput.value = "";
   }
 
-  // ── Display text immediately, then lazy-correct via fixText ──
-  function displayWithLazyFix(text) {
-    ocrOutput.textContent = text;
+  // ── Display text immediately, then lazy-correct each page via fixText ──
+  const PAGE_BREAK = "\n\n--- Page break ---\n\n";
+
+  function displayWithLazyFix(pages) {
+    const corrected = [...pages];
+    ocrOutput.textContent = corrected.join(PAGE_BREAK);
     resultSection.style.display = "block";
-    fixText(text).then((corrected) => {
-      if (ocrOutput.textContent === text) {
-        ocrOutput.textContent = corrected;
-      }
-    }).catch(() => { /* keep original on failure */ });
+
+    pages.forEach((raw, i) => {
+      fixText(raw).then((fixed) => {
+        if (fixed !== raw) {
+          corrected[i] = fixed;
+          ocrOutput.textContent = corrected.join(PAGE_BREAK);
+        }
+      }).catch(() => { /* keep original on failure */ });
+    });
   }
 
   // ── Load Tesseract.js from CDN ───────────────────────────────
@@ -149,7 +156,7 @@
     }
 
     await worker.terminate();
-    return results.join("\n\n--- Page break ---\n\n");
+    return results;
   }
 
   // ── Handle an uploaded file ──────────────────────────────────
@@ -169,23 +176,23 @@
         // Try native text extraction first
         setStatus("Checking for embedded text…");
         const pageTexts = await extractPdfText(pdf);
-        const nativeText = pageTexts.join("\n\n--- Page break ---\n\n").trim();
+        const nativeText = pageTexts.join(PAGE_BREAK).trim();
 
         if (nativeText.length > 0) {
-          displayWithLazyFix(nativeText);
+          displayWithLazyFix(pageTexts);
           setStatus("Done — text extracted directly from PDF.");
           return;
         }
 
         // No embedded text found — fall back to OCR
         setStatus("No embedded text found. Running OCR…");
-        const ocrText = await runOcr(images);
-        displayWithLazyFix(ocrText);
+        const ocrPages = await runOcr(images);
+        displayWithLazyFix(ocrPages);
       } else {
         showPreviews([file]);
         setStatus("Loading OCR engine…");
-        const ocrText = await runOcr([file]);
-        displayWithLazyFix(ocrText);
+        const ocrPages = await runOcr([file]);
+        displayWithLazyFix(ocrPages);
       }
 
       setStatus("Done!");
