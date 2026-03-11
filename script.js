@@ -2,6 +2,7 @@
   // ── CDN / local imports ───────────────────────────────────────
   const TESSERACT_CDN =
     "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+  const {fixText} = await import("./libs/fix-text.js");
 
   // ── DOM refs ─────────────────────────────────────────────────
   const dropZone = document.getElementById("drop-zone");
@@ -133,7 +134,7 @@
       const {
         data: { text },
       } = await worker.recognize(imageBlobs[i]);
-      results.push(text);
+      results.push(await fixText(text));
     }
 
     await worker.terminate();
@@ -169,12 +170,12 @@
         // No embedded text found — fall back to OCR
         setStatus("No embedded text found. Running OCR…");
         const ocrText = await runOcr(images);
-        ocrOutput.textContent = ocrText;
+        ocrOutput.textContent = await fixText(ocrText);
       } else {
         showPreviews([file]);
         setStatus("Loading OCR engine…");
         const ocrText = await runOcr([file]);
-        ocrOutput.textContent = ocrText;
+        ocrOutput.textContent = await fixText(ocrText);
       }
 
       resultSection.style.display = "block";
