@@ -79,6 +79,7 @@
     if (pdfjsLibCached) return pdfjsLibCached;
     const pdfjs = await import("./libs/pdf.min.mjs");
     pdfjs.GlobalWorkerOptions.workerSrc = "./libs/pdf.worker.min.mjs";
+    await globalThis.pdfWorkerInit;
     pdfjsLibCached = pdfjs;
     return pdfjs;
   }
