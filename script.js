@@ -1,10 +1,10 @@
 (async function () {
   // ── CDN / local imports ─
-  await import('https://cdn.jsdelivr.net/npm/core-js-bundle/minified.min.js?');
+  await import("https://cdn.jsdelivr.net/npm/core-js-bundle/minified.min.js?");
   const TESSERACT_CDN =
     "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
   const _fixText = (await import("./libs/fix-text.js")).fixText;
-  const fixText = text => _fixText(text, "fy", "en");
+  const fixText = (text) => _fixText(text, "fy", "en");
   // ── DOM refs ─────────────────────────────────────────────────
   const dropZone = document.getElementById("drop-zone");
   const fileInput = document.getElementById("file-input");
@@ -55,12 +55,16 @@
     resultSection.style.display = "block";
 
     pages.forEach((raw, i) => {
-      fixText(raw).then((fixed) => {
-        if (fixed !== raw) {
-          corrected[i] = fixed;
-          ocrOutput.textContent = corrected.join(PAGE_BREAK);
-        }
-      }).catch(() => { /* keep original on failure */ });
+      fixText(raw)
+        .then((fixed) => {
+          if (fixed !== raw) {
+            corrected[i] = fixed;
+            ocrOutput.textContent = corrected.join(PAGE_BREAK);
+          }
+        })
+        .catch(() => {
+          /* keep original on failure */
+        });
     });
   }
 
@@ -106,7 +110,7 @@
         await page.render({ canvasContext: ctx, viewport }).promise;
 
         return new Promise((r) => canvas.toBlob(r, "image/png"));
-      })
+      }),
     );
     return { pdf, images };
   }
@@ -146,8 +150,8 @@
       const Tesseract = await loadTesseract();
       const workers = await Promise.all(
         Array.from({ length: INITIAL_POOL_SIZE }, () =>
-          Tesseract.createWorker("eng")
-        )
+          Tesseract.createWorker("eng"),
+        ),
       );
       idle.push(...workers);
     })();
@@ -174,44 +178,45 @@
     const results = await Promise.all(
       imageBlobs.map(async (blob) => {
         const worker = await acquireWorker();
-        const { data: { text } } = await worker.recognize(blob);
+        const {
+          data: { text },
+        } = await worker.recognize(blob);
         releaseWorker(worker);
         return text;
-      })
+      }),
     );
 
     return results;
   }
 
-  function tagAndRemoveUnseen(doc=document) {
-  const walker = doc.createTreeWalker(
-    doc.documentElement,
-    NodeFilter.SHOW_ELEMENT,
-    null
-  );
+  function tagAndRemoveUnseen(doc = document) {
+    const walker = doc.createTreeWalker(
+      doc.documentElement,
+      NodeFilter.SHOW_ELEMENT,
+      null,
+    );
 
-  const unseen = [];
-  let node;
+    const unseen = [];
+    let node;
 
-  while ((node = walker.nextNode())) {
-    const style = getComputedStyle(node);
+    while ((node = walker.nextNode())) {
+      const style = getComputedStyle(node);
 
-    if (
-      style.display === 'none' ||
-      style.visibility === 'hidden' ||
-      style.opacity === '0'
-    ) {
-      node.dataset.unseen = '';
-      unseen.push(node);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.opacity === "0"
+      ) {
+        node.dataset.unseen = "";
+        unseen.push(node);
+      }
     }
-  }
 
-  for (const node of unseen) {
-    node.remove();
-  }
+    for (const node of unseen) {
+      node.remove();
+    }
 
-  return unseen.length;
-
+    return unseen.length;
   }
 
   // ── Handle an uploaded file ──────────────────────────────────
@@ -220,16 +225,22 @@
 
     clearAll();
 
-    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    const isMarkup = /^(text\/(html|xml)|application\/(xml|xhtml\+xml|svg\+xml))$/.test(file.type)
-      || /\.(html?|xml|xhtml|svg)$/i.test(file.name);
+    const isPdf =
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf");
+    const isMarkup =
+      /^(text\/(html|xml)|application\/(xml|xhtml\+xml|svg\+xml))$/.test(
+        file.type,
+      ) || /\.(html?|xml|xhtml|svg)$/i.test(file.name);
 
     try {
       if (isMarkup) {
         setStatus("Parsing markup…");
         const markup = await file.text();
-        const mimeType = /xml|xhtml|svg/i.test(file.name) || /xml/i.test(file.type)
-          ? "text/xml" : "text/html";
+        const mimeType =
+          /xml|xhtml|svg/i.test(file.name) || /xml/i.test(file.type)
+            ? "text/xml"
+            : "text/html";
         const doc = new DOMParser().parseFromString(markup, mimeType);
         tagAndRemoveUnseen(doc);
         const root = doc.body || doc.documentElement;
@@ -273,16 +284,48 @@
   }
 
   // ── Fetch a URL and process it ───────────────────────────────
+
+  const gasUrl = `https://script.google.com/macros/s/AKfycbyzgMVduwBNMiOiWL5iqrm7ixjfUU4ajWEt0tfZvFqLxOPXep9X9V41PFWuHdusLutx/exec`;
+
+  async function fetchAllChunks(targetUrl) {
+    const chunks = [];
+    let chunk = 0;
+    let contentType = "application/octet-stream";
+
+    while (true) {
+      const res = await fetch(
+        `${gasUrl}?url=${encodeURIComponent(targetUrl)}&chunk=${chunk}`,
+      );
+      const body = await res.json();
+
+      if (body.error) throw new Error(body.error);
+
+      if (body.contentType) contentType = body.contentType;
+
+      // Decode base64 chunk to binary and collect as Uint8Array
+      const binary = atob(body.data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      chunks.push(bytes);
+
+      if (body.done) break;
+      chunk++;
+    }
+
+    return new Blob(chunks, { type: contentType });
+  }
+
   async function handleUrl(url) {
     clearAll();
     setStatus("Fetching URL…");
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const contentType = response.headers.get("content-type") || "";
-      const blob = await response.blob();
+      const blob = await fetchAllChunks(url);
       const filename = url.split("/").pop().split("?")[0] || "download";
-      const file = new File([blob], filename, { type: contentType.split(";")[0] });
+      const file = new File([blob], filename, {
+        type: blob.type.split(";")[0],
+      });
       await handleFile(file);
     } catch (err) {
       console.error(err);
@@ -333,4 +376,4 @@
     }
   });
 })();
-import('https://patrick-ring-motive.github.io/logs-highlighter/index.js')
+import("https://patrick-ring-motive.github.io/logs-highlighter/index.js");
