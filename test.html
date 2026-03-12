@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF.js HTML Text Layer Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf_viewer.min.css">
+    <style>
+        body { font-family: sans-serif; background-color: #525659; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #page-container {
+            position: relative; /* High importance: creates a coordinate system for the text */
+            background-color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .textLayer { opacity: 0.4; /* Set to 0.0 to make text invisible but selectable */ }
+        .controls { margin-bottom: 20px; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <h1>PDF to HTML Text Layer</h1>
+        <p>The text you see highlighted in <b>blue/purple</b> is actual HTML <code>&lt;span&gt;</code> elements.</p>
+    </div>
+
+    <div id="page-container">
+        <canvas id="pdf-canvas"></canvas>
+        <div id="text-layer" class="textLayer"></div>
+    </div>
+
+    <script type="module">
+        import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.mjs';
+
+        // Set worker path
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.mjs';
+
+        const url = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf';
+
+        async function renderPdf() {
+            const loadingTask = pdfjsLib.getDocument(url);
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(1);
+
+            const scale = 1.5;
+            const viewport = page.getViewport({ scale });
+
+            // 1. Prepare Canvas (The "Before" / Visuals)
+            const canvas = document.getElementById('pdf-canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            // 2. Prepare Text Layer Container (The "After" / HTML)
+            const textLayerDiv = document.getElementById('text-layer');
+            textLayerDiv.style.width = `${viewport.width}px`;
+            textLayerDiv.style.height = `${viewport.height}px`;
+
+            // Render visual layer
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+            // Render HTML Text Layer
+            const textContent = await page.getTextContent();
+            await pdfjsLib.renderTextLayer({
+                textContentSource: textContent,
+                container: textLayerDiv,
+                viewport: viewport
+            }).promise;
+
+            console.log("Rendering complete!");
+        }
+
+        renderPdf();
+    </script>
+</body>
+</html>
