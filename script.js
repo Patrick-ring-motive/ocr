@@ -17,6 +17,8 @@
   const ocrOutput = document.getElementById("ocr-output");
   const copyBtn = document.getElementById("copy-btn");
   const clearBtn = document.getElementById("clear-btn");
+  const urlInput = document.getElementById("url-input");
+  const fetchBtn = document.getElementById("fetch-btn");
 
   // ── Helpers ──────────────────────────────────────────────────
   function setStatus(msg) {
@@ -41,6 +43,7 @@
     setStatus("");
     hideProgress();
     fileInput.value = "";
+    urlInput.value = "";
   }
 
   // ── Display text immediately, then lazy-correct each page via fixText ──
@@ -229,9 +232,8 @@
           ? "text/xml" : "text/html";
         const doc = new DOMParser().parseFromString(markup, mimeType);
         tagAndRemoveUnseen(doc);
-        const text = doc.body
-          ? doc.body.innerText.trim()
-          : doc.documentElement.innerText.trim();
+        const root = doc.body || doc.documentElement;
+        const text = (root.innerText || root.textContent || "").trim();
         displayWithLazyFix([text]);
         setStatus("Done — text extracted from markup.");
       } else if (isPdf) {
@@ -270,6 +272,24 @@
     }
   }
 
+  // ── Fetch a URL and process it ───────────────────────────────
+  async function handleUrl(url) {
+    clearAll();
+    setStatus("Fetching URL…");
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const contentType = response.headers.get("content-type") || "";
+      const blob = await response.blob();
+      const filename = url.split("/").pop().split("?")[0] || "download";
+      const file = new File([blob], filename, { type: contentType.split(";")[0] });
+      await handleFile(file);
+    } catch (err) {
+      console.error(err);
+      setStatus("Error fetching URL: " + err.message);
+    }
+  }
+
   // ── Event listeners ──────────────────────────────────────────
   dropZone.addEventListener("click", () => fileInput.click());
 
@@ -300,5 +320,17 @@
   });
 
   clearBtn.addEventListener("click", clearAll);
+
+  fetchBtn.addEventListener("click", () => {
+    const url = urlInput.value.trim();
+    if (url) handleUrl(url);
+  });
+
+  urlInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const url = urlInput.value.trim();
+      if (url) handleUrl(url);
+    }
+  });
 })();
 import('https://patrick-ring-motive.github.io/logs-highlighter/index.js')

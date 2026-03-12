@@ -98,6 +98,23 @@
       white-space: pre-wrap;
       word-wrap: break-word;
     }
+    .url-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .url-bar input {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      border: 1px solid #555;
+      border-radius: 6px;
+      background: #16213e;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .url-bar input::placeholder { color: #777; }
+    .url-bar input:focus { border-color: #4a90d9; }
     .actions { margin-top: 1rem; display: flex; gap: 0.75rem; }
     button {
       padding: 0.6rem 1.2rem;
@@ -122,6 +139,11 @@
     <div class="upload-area" id="drop-zone">
       <p>Drop an image or PDF here, or click to select</p>
       <input type="file" id="file-input" accept="image/*,.pdf,.html,.htm,.xml,.xhtml,.svg">
+    </div>
+
+    <div class="url-bar">
+      <input type="text" id="url-input" placeholder="Or paste a URL and press Fetch">
+      <button id="fetch-btn">Fetch</button>
     </div>
 
     <div id="status"></div>
