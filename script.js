@@ -180,6 +180,37 @@
     return results;
   }
 
+  function tagAndRemoveUnseen(doc=document) {
+  const walker = doc.createTreeWalker(
+    doc.documentElement,
+    NodeFilter.SHOW_ELEMENT,
+    null
+  );
+
+  const unseen = [];
+  let node;
+
+  while ((node = walker.nextNode())) {
+    const style = getComputedStyle(node);
+
+    if (
+      style.display === 'none' ||
+      style.visibility === 'hidden' ||
+      style.opacity === '0'
+    ) {
+      node.dataset.unseen = '';
+      unseen.push(node);
+    }
+  }
+
+  for (const node of unseen) {
+    node.remove();
+  }
+
+  return unseen.length;
+
+  }
+
   // ── Handle an uploaded file ──────────────────────────────────
   async function handleFile(file) {
     if (!file) return;
@@ -197,6 +228,7 @@
         const mimeType = /xml|xhtml|svg/i.test(file.name) || /xml/i.test(file.type)
           ? "text/xml" : "text/html";
         const doc = new DOMParser().parseFromString(markup, mimeType);
+        tagAndRemoveUnseen(doc);
         const text = doc.body
           ? doc.body.innerText.trim()
           : doc.documentElement.innerText.trim();
