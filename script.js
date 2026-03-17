@@ -4,7 +4,7 @@
   const TESSERACT_CDN =
     "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
   const _fixText = (await import("./libs/fix-text.js")).fixText;
-  const fixText = (text) => text;//_fixText(text, "fy", "en");
+  const fixText = async (text) => text;//_fixText(text, "fy", "en");
   // ── DOM refs ─────────────────────────────────────────────────
   const dropZone = document.getElementById("drop-zone");
   const fileInput = document.getElementById("file-input");
