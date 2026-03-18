@@ -376,4 +376,4 @@
     }
   });
 })();
-import("https://patrick-ring-motive.github.io/logs-highlighter/index.js");
+//import("https://patrick-ring-motive.github.io/logs-highlighter/index.js");
