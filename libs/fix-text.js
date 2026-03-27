@@ -33,7 +33,9 @@ export const fixText = async function fixText(
   try {
     if (localStorage.getItem(text)) return localStorage.getItem(text);
     if (langCache[text]) return JSON.parse(await langCache[text]).textOut;
-    const payload = { text };
+    const payload = {
+      text
+    };
     payload.sourceLang = sourceLang;
     payload.targetLang = targetLang;
     langCache[text] = fetchText(`${url}`, {

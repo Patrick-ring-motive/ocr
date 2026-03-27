@@ -1,10 +1,10 @@
-(async function () {
+(async function() {
   // ── CDN / local imports ─
   await import("https://cdn.jsdelivr.net/npm/core-js-bundle/minified.min.js?");
   const TESSERACT_CDN =
     "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
   const _fixText = (await import("./libs/fix-text.js")).fixText;
-  const fixText = async (text) => text;//_fixText(text, "fy", "en");
+  const fixText = async (text) => text; //_fixText(text, "fy", "en");
   // ── DOM refs ─────────────────────────────────────────────────
   const dropZone = document.getElementById("drop-zone");
   const fileInput = document.getElementById("file-input");
@@ -95,24 +95,36 @@
   async function loadPdf(file) {
     const pdfjsLib = await loadPdfJs();
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfjsLib.getDocument({
+      data: arrayBuffer
+    }).promise;
     setStatus(`Rendering ${pdf.numPages} PDF page(s)…`);
     const images = await Promise.all(
-      Array.from({ length: pdf.numPages }, async (_, idx) => {
+      Array.from({
+        length: pdf.numPages
+      }, async (_, idx) => {
         const page = await pdf.getPage(idx + 1);
         const scale = 2;
-        const viewport = page.getViewport({ scale });
+        const viewport = page.getViewport({
+          scale
+        });
 
         const canvas = document.createElement("canvas");
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         const ctx = canvas.getContext("2d");
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        await page.render({
+          canvasContext: ctx,
+          viewport
+        }).promise;
 
         return new Promise((r) => canvas.toBlob(r, "image/png"));
       }),
     );
-    return { pdf, images };
+    return {
+      pdf,
+      images
+    };
   }
 
   // ── Extract embedded text from a PDF using PDF.js ────────────
@@ -149,7 +161,9 @@
     poolReady = (async () => {
       const Tesseract = await loadTesseract();
       const workers = await Promise.all(
-        Array.from({ length: INITIAL_POOL_SIZE }, () =>
+        Array.from({
+            length: INITIAL_POOL_SIZE
+          }, () =>
           Tesseract.createWorker("eng"),
         ),
       );
@@ -179,7 +193,9 @@
       imageBlobs.map(async (blob) => {
         const worker = await acquireWorker();
         const {
-          data: { text },
+          data: {
+            text
+          },
         } = await worker.recognize(blob);
         releaseWorker(worker);
         return text;
@@ -238,9 +254,9 @@
         setStatus("Parsing markup…");
         const markup = await file.text();
         const mimeType =
-          /xml|xhtml|svg/i.test(file.name) || /xml/i.test(file.type)
-            ? "text/xml"
-            : "text/html";
+          /xml|xhtml|svg/i.test(file.name) || /xml/i.test(file.type) ?
+          "text/xml" :
+          "text/html";
         const doc = new DOMParser().parseFromString(markup, mimeType);
         tagAndRemoveUnseen(doc);
         const root = doc.body || doc.documentElement;
@@ -249,7 +265,10 @@
         setStatus("Done — text extracted from markup.");
       } else if (isPdf) {
         setStatus("Loading PDF…");
-        const { pdf, images } = await loadPdf(file);
+        const {
+          pdf,
+          images
+        } = await loadPdf(file);
         showPreviews(images);
 
         // Try native text extraction first
@@ -314,7 +333,9 @@
       chunk++;
     }
 
-    return new Blob(chunks, { type: contentType });
+    return new Blob(chunks, {
+      type: contentType
+    });
   }
 
   async function handleUrl(url) {
