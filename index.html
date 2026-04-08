@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OCR Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    code {
+      font-family: sans-serif !important;
+      border: none !important;
+    }
+
+    body {
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #eee;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .upload-area {
+      border: 2px dashed #555;
+      border-radius: 12px;
+      padding: 3rem;
+      text-align: center;
+      background: #16213e;
+      cursor: pointer;
+      transition:
+        border-color 0.2s,
+        background 0.2s;
+    }
+
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: #4a90d9;
+      background: #1a2a4a;
+    }
+
+    .upload-area p {
+      font-size: 1.1rem;
+      color: #aaa;
+    }
+
+    .upload-area input {
+      display: none;
+    }
+
+    #status {
+      margin-top: 1rem;
+      text-align: center;
+      font-size: 0.95rem;
+      color: #aaa;
+      min-height: 1.4em;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      background: #2a2a3e;
+      border-radius: 6px;
+      margin-top: 0.5rem;
+      height: 8px;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #4a90d9;
+      border-radius: 6px;
+      transition: width 0.2s;
+    }
+
+    #preview-section {
+      display: none;
+      margin-top: 1.5rem;
+      background: #16213e;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    #preview-section h2 {
+      margin-bottom: 1rem;
+    }
+
+    #preview-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    #preview-container img,
+    #preview-container canvas {
+      max-width: 200px;
+      max-height: 200px;
+      border: 1px solid #333;
+      border-radius: 6px;
+      object-fit: contain;
+    }
+
+    #result-section {
+      display: none;
+      margin-top: 1.5rem;
+      background: #16213e;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    #result-section h2 {
+      margin-bottom: 1rem;
+    }
+
+    #ocr-output {
+      width: 100%;
+      min-height: 200px;
+      max-height: 600px;
+      overflow: auto;
+      padding: 1rem;
+      font-family: "Courier New", monospace;
+      font-size: 0.9rem;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #c9d1d9;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .url-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .url-bar input {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      border: 1px solid #555;
+      border-radius: 6px;
+      background: #16213e;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .url-bar input::placeholder {
+      color: #777;
+    }
+
+    .url-bar input:focus {
+      border-color: #4a90d9;
+    }
+
+    .actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    button {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: #4a90d9;
+      color: #fff;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #357ab8;
+    }
+
+    button:disabled {
+      background: #444;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #555;
+    }
+
+    button.secondary:hover {
+      background: #666;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>&#128269; OCR Demo</h1>
+
+    <div class="upload-area" id="drop-zone">
+      <p>Drop an image or PDF here, or click to select</p>
+      <input type="file" id="file-input" accept="image/*,.pdf,.html,.htm,.xml,.xhtml,.svg" />
+    </div>
+
+    <div class="url-bar">
+      <input type="text" id="url-input" placeholder="Or paste a URL and press Fetch" />
+      <button id="fetch-btn">Fetch</button>
+    </div>
+
+    <div id="status"></div>
+    <div class="progress-bar-container" id="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <div id="preview-section">
+      <h2>Preview</h2>
+      <div id="preview-container"></div>
+    </div>
+
+    <div id="result-section">
+      <h2>Extracted Text</h2>
+      <pre><code id="ocr-output" class="language-bash"></code></pre>
+      <div class="actions">
+        <button id="copy-btn">Copy Text</button>
+        <button id="clear-btn" class="secondary">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js" type="module"></script>
+</body>
+
+</html>
